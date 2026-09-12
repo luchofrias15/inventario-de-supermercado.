@@ -4,3 +4,34 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--background); color: var(--foreground); font-family: Arial, sans-serif; }
 button, input, select { font: inherit; }
+
+.home-shell {
+  background:
+    radial-gradient(circle at 78% 18%, rgba(20, 184, 166, 0.12), transparent 28rem),
+    radial-gradient(circle at 18% 72%, rgba(37, 99, 235, 0.10), transparent 30rem),
+    #07111f;
+}
+.home-shell::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: '';
+  opacity: 0.3;
+  background-image: linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+.brand-mark { display: flex; height: 28px; align-items: end; gap: 3px; }
+.brand-mark span { display: block; width: 6px; border-radius: 4px; background: #5eead4; box-shadow: 0 0 16px rgba(94, 234, 212, .4); }
+.brand-mark span:nth-child(1) { height: 12px; opacity: .65; }
+.brand-mark span:nth-child(2) { height: 20px; }
+.brand-mark span:nth-child(3) { height: 28px; opacity: .8; }
+.home-gradient-text { background: linear-gradient(110deg, #99f6e4, #38bdf8 55%, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.home-primary-button { background: linear-gradient(110deg, #99f6e4, #67e8f9); box-shadow: 0 10px 30px rgba(45, 212, 191, .18); transition: transform .2s ease, box-shadow .2s ease; }
+.home-primary-button:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(45, 212, 191, .3); }
+.home-hero-glow { position: absolute; top: 12%; left: 20%; width: 24rem; height: 24rem; border-radius: 999px; background: rgba(20, 184, 166, .09); filter: blur(70px); }
+.dashboard-preview { transform: rotate(1.5deg); transition: transform .4s ease; }
+.dashboard-preview:hover { transform: rotate(0deg) translateY(-4px); }
+.preview-card { border: 1px solid rgba(255, 255, 255, .08); background: rgba(255, 255, 255, .04); }
+.chart-bar { background: linear-gradient(to top, #14b8a6, #67e8f9); opacity: .72; }
+.avatar { display: grid; height: 28px; width: 28px; place-items: center; border: 2px solid #07111f; border-radius: 999px; color: #0f172a; font-size: 8px; font-weight: 800; }
