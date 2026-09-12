@@ -4,6 +4,12 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [react()],
-  test: { environment: 'jsdom', globals: true, setupFiles: ['./src/test/setup.ts'] },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['node_modules/**', '.next/**', 'coverage/**'],
+  },
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
 });
