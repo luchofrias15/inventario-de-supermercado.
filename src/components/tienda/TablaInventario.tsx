@@ -2,9 +2,12 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Campo } from '@/components/ui/Campo';
 import { EstadoVacio } from '@/components/ui/EstadoVacio';
 import { InsigniaEstado } from '@/components/tienda/InsigniaEstado';
+import { Aviso } from '@/components/ui/Aviso';
+import { leerRespuestaApi } from '@/lib/clienteApi';
 import type { FilaInventario } from '@/lib/datos/tipos';
 
 function EstadoProducto({ producto }: { producto: FilaInventario }) {
@@ -12,8 +15,34 @@ function EstadoProducto({ producto }: { producto: FilaInventario }) {
 }
 
 export function TablaInventario({ productos }: { productos: FilaInventario[] }) {
+  const router = useRouter();
   const [busqueda, setBusqueda] = useState('');
   const [soloReorden, setSoloReorden] = useState(false);
+  const [procesando, setProcesando] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  async function ocultarProducto(producto: FilaInventario) {
+    const confirmado = window.confirm(
+      `¿Ocultar "${producto.nombre}" del inventario? Se desactivará y conservará su historial.`,
+    );
+    if (!confirmado) return;
+
+    setProcesando(producto.codigo);
+    setError('');
+    try {
+      const respuesta = await fetch(
+        `/api/tienda/productos/${encodeURIComponent(producto.codigo)}`,
+        { method: 'DELETE' },
+      );
+      await leerRespuestaApi<{ codigo: string; activo: boolean }>(respuesta);
+      router.refresh();
+    } catch (causa) {
+      setError(causa instanceof Error ? causa.message : 'No se pudo ocultar el producto.');
+    } finally {
+      setProcesando(null);
+    }
+  }
+
   const filtrados = useMemo(() => {
     const termino = busqueda.trim().toLocaleLowerCase('es-CO');
     return productos.filter((producto) => {
@@ -43,6 +72,7 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
 
   return (
     <section aria-labelledby="titulo-inventario" className="space-y-4">
+      {error && <Aviso tipo="error">{error}</Aviso>}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="w-full sm:max-w-sm">
           <Campo
@@ -77,6 +107,9 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
               <th scope="col" className="px-4 py-3">Categoría</th>
               <th scope="col" className="px-4 py-3 text-right">Stock disponible</th>
               <th scope="col" className="px-4 py-3">Estado</th>
+              <th scope="col" className="px-4 py-3 text-right">
+                <span className="sr-only">Acciones</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -94,6 +127,24 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
                 <td className="px-4 py-3">{producto.categoria === 'perecedero' ? 'Perecedero' : 'No perecedero'}</td>
                 <td className="px-4 py-3 text-right font-mono tabular-nums">{producto.stockDisponible}</td>
                 <td className="px-4 py-3"><EstadoProducto producto={producto} /></td>
+                <td className="px-4 py-3 text-right">
+                  <button
+                    type="button"
+                    aria-label={`Ocultar ${producto.nombre} del inventario`}
+                    title="Ocultar producto del inventario"
+                    disabled={procesando !== null}
+                    onClick={() => void ocultarProducto(producto)}
+                    className="inline-flex size-9 items-center justify-center rounded-lg text-texto-suave transition hover:bg-vencido/10 hover:text-vencido focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vencido disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {procesando === producto.codigo ? (
+                      <span className="text-xs" aria-hidden="true">…</span>
+                    ) : (
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2m3 0-.8 14H5.8L5 6m5 4v6m4-6v6" />
+                      </svg>
+                    )}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -113,7 +164,25 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
                 </Link>
                 <p className="mt-1 font-mono text-xs text-texto-suave">{producto.codigo}</p>
               </div>
-              <EstadoProducto producto={producto} />
+              <div className="flex items-center gap-2">
+                <EstadoProducto producto={producto} />
+                <button
+                  type="button"
+                  aria-label={`Ocultar ${producto.nombre} del inventario`}
+                  title="Ocultar producto del inventario"
+                  disabled={procesando !== null}
+                  onClick={() => void ocultarProducto(producto)}
+                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-texto-suave transition hover:bg-vencido/10 hover:text-vencido focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vencido disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {procesando === producto.codigo ? (
+                    <span className="text-xs" aria-hidden="true">…</span>
+                  ) : (
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2m3 0-.8 14H5.8L5 6m5 4v6m4-6v6" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
             <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div>
