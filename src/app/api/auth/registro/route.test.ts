@@ -14,7 +14,10 @@ function registroRequest(body: unknown) {
   return new Request('http://localhost/api/auth/registro', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      captchaToken: 'test-captcha-token',
+      ...(typeof body === 'object' && body !== null ? body : {}),
+    }),
   });
 }
 
@@ -47,6 +50,7 @@ describe('registro endpoint', () => {
       email: 'ana@example.com',
       password: 'secure-password',
       data: { full_name: 'Ana Pérez', account_type: 'customer' },
+      gotrue_meta_security: { captcha_token: 'test-captcha-token' },
     });
   });
 
@@ -84,6 +88,41 @@ describe('registro endpoint', () => {
 
     expect(response.status).toBe(400);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('requires a CAPTCHA token before contacting Supabase Auth', async () => {
+    const response = await POST(
+      registroRequest({
+        nombre: 'Ana',
+        email: 'ana@example.com',
+        password: 'secure-password',
+        captchaToken: '',
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('explains when Supabase rejects the CAPTCHA verification', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'test-api-key');
+    fetchMock.mockResolvedValueOnce(Response.json({ code: 'captcha_failed' }, { status: 400 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await POST(
+      registroRequest({
+        nombre: 'Ana',
+        email: 'ana@example.com',
+        password: 'secure-password',
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error:
+        'Supabase no pudo validar el CAPTCHA. Completa de nuevo la verificación e inténtalo otra vez.',
+    });
   });
 
   it('creates a store-admin signup with the store name in user metadata', async () => {

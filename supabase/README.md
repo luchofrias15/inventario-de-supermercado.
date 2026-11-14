@@ -57,3 +57,16 @@ profile through the Supabase Data API. Set
 development. Existing Vercel-linked `NEXT_PUBLIC_INVENTARIO_INVENTARIOSUPABASE_URL`
 and `NEXT_PUBLIC_INVENTARIO_INVENTARIOSUPABASE_ANON_KEY` variables are also
 recognized. The service-role key is never used by the login endpoint.
+
+Registration uses Cloudflare Turnstile. Create a Turnstile widget for the
+application domains, set its site key as `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in
+the application environment, and configure the matching secret in Supabase
+under Authentication > Bot and Abuse Protection > CAPTCHA. The registration
+route forwards the single-use token to Supabase Auth, which validates it with
+the configured secret. Keep email confirmation enabled in Supabase and use a
+custom SMTP provider to deliver confirmation messages to arbitrary addresses.
+
+CAPTCHA does not remove Supabase Auth or email-provider rate limits. Adjust
+those limits in the Supabase Dashboard only as needed; do not disable abuse
+protections. Registration is intentionally unavailable when the public
+Turnstile site key is not configured.
