@@ -52,16 +52,16 @@ export default function RegistroPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
-      <form onSubmit={submit} className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
-        <h1 className="text-2xl font-bold text-slate-900">Crear cuenta</h1>
-        <p className="mt-2 text-sm text-slate-500">
+    <main className="auth-shell flex items-center justify-center p-6">
+      <form onSubmit={submit} className="auth-card w-full max-w-md rounded-2xl p-8">
+        <h1 className="text-2xl font-bold text-white">Crear cuenta</h1>
+        <p className="mt-2 text-sm text-slate-300">
           Regístrate para administrar el inventario de tu tienda.
         </p>
         <label className="mt-6 block text-sm font-medium">
           Nombre
           <input
-            className="mt-1 w-full rounded border p-3"
+            className="auth-input mt-1 w-full rounded-lg p-3"
             value={nombre}
             onChange={(event) => setNombre(event.target.value)}
             autoComplete="name"
@@ -72,7 +72,7 @@ export default function RegistroPage() {
         <label className="mt-4 block text-sm font-medium">
           Correo
           <input
-            className="mt-1 w-full rounded border p-3"
+            className="auth-input mt-1 w-full rounded-lg p-3"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             type="email"
@@ -84,7 +84,7 @@ export default function RegistroPage() {
         <label className="mt-4 block text-sm font-medium">
           Contraseña
           <input
-            className="mt-1 w-full rounded border p-3"
+            className="auth-input mt-1 w-full rounded-lg p-3"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             type="password"
@@ -97,7 +97,7 @@ export default function RegistroPage() {
         <label className="mt-4 block text-sm font-medium">
           Confirmar contraseña
           <input
-            className="mt-1 w-full rounded border p-3"
+            className="auth-input mt-1 w-full rounded-lg p-3"
             value={confirmacion}
             onChange={(event) => setConfirmacion(event.target.value)}
             type="password"
@@ -111,13 +111,13 @@ export default function RegistroPage() {
         {mensaje && <p role="status" className="mt-3 text-sm text-emerald-700">{mensaje}</p>}
         <button
           disabled={loading}
-          className="mt-6 w-full rounded bg-slate-900 py-3 font-semibold text-white disabled:opacity-60"
+          className="auth-primary-button mt-6 w-full rounded-lg py-3 font-bold disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? 'Creando cuenta...' : 'Crear cuenta'}
         </button>
-        <p className="mt-5 text-center text-sm text-slate-600">
+        <p className="mt-5 text-center text-sm text-slate-300">
           ¿Ya tienes cuenta?{' '}
-          <Link href="/login" className="font-semibold text-slate-900 underline underline-offset-4">
+          <Link href="/login" className="auth-link font-semibold underline underline-offset-4">
             Iniciar sesión
           </Link>
         </p>

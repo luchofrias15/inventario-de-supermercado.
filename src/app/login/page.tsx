@@ -35,25 +35,25 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
-      <form onSubmit={submit} className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
-        <h1 className="text-2xl font-bold text-slate-900">Acceso a Inventario</h1>
-        <p className="mt-2 text-sm text-slate-500">Inicia sesion con tu cuenta de Inventario Mercado.</p>
+    <main className="auth-shell flex items-center justify-center p-6">
+      <form onSubmit={submit} className="auth-card w-full max-w-md rounded-2xl p-8">
+        <h1 className="text-2xl font-bold text-white">Acceso a Inventario</h1>
+        <p className="mt-2 text-sm text-slate-300">Inicia sesion con tu cuenta de Inventario Mercado.</p>
         <label className="mt-6 block text-sm font-medium">
           Correo
-          <input className="mt-1 w-full rounded border p-3" value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="username" required />
+          <input className="auth-input mt-1 w-full rounded-lg p-3" value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="username" required />
         </label>
         <label className="mt-4 block text-sm font-medium">
           Contrasena
-          <input className="mt-1 w-full rounded border p-3" value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="current-password" required />
+          <input className="auth-input mt-1 w-full rounded-lg p-3" value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="current-password" required />
         </label>
         {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
-        <button disabled={loading} className="mt-6 w-full rounded bg-slate-900 py-3 font-semibold text-white disabled:opacity-60">
+        <button disabled={loading} className="auth-primary-button mt-6 w-full rounded-lg py-3 font-bold disabled:cursor-not-allowed disabled:opacity-60">
           {loading ? 'Iniciando sesion...' : 'Entrar'}
         </button>
-        <p className="mt-5 text-center text-sm text-slate-600">
+        <p className="mt-5 text-center text-sm text-slate-300">
           ¿No tienes cuenta?{' '}
-          <Link href="/registro" className="font-semibold text-slate-900 underline underline-offset-4">
+          <Link href="/registro" className="auth-link font-semibold underline underline-offset-4">
             Crear cuenta
           </Link>
         </p>
