@@ -4,21 +4,23 @@ import { getSupabaseConfig } from '@/lib/supabase-config';
 
 export const runtime = 'nodejs';
 
-const registroSchema = z.object({
-  nombre: z.string().trim().min(1).max(120),
-  email: z.string().trim().toLowerCase().email().max(254),
-  password: z.string().min(8).max(1024),
-  accountType: z.enum(['customer', 'store_admin', 'page_admin']).default('customer'),
-  storeName: z.string().trim().max(120).optional(),
-}).superRefine((data, context) => {
-  if (data.accountType === 'store_admin' && !data.storeName) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['storeName'],
-      message: 'Ingresa el nombre de tu tienda.',
-    });
-  }
-});
+const registroSchema = z
+  .object({
+    nombre: z.string().trim().min(1).max(120),
+    email: z.string().trim().toLowerCase().email().max(254),
+    password: z.string().min(8).max(1024),
+    accountType: z.enum(['customer', 'store_admin', 'page_admin']).default('customer'),
+    storeName: z.string().trim().max(120).optional(),
+  })
+  .superRefine((data, context) => {
+    if (data.accountType === 'store_admin' && !data.storeName) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['storeName'],
+        message: 'Ingresa el nombre de tu tienda.',
+      });
+    }
+  });
 
 interface SupabaseSignupResponse {
   id?: string;
@@ -33,6 +35,61 @@ interface SupabaseSignupResponse {
 
 function esObjeto(valor: unknown): valor is Record<string, unknown> {
   return typeof valor === 'object' && valor !== null;
+}
+
+function codigoErrorSupabase(error: unknown): string | undefined {
+  if (!esObjeto(error)) return undefined;
+  const codigo = error.error_code ?? error.code ?? error.error;
+  return typeof codigo === 'string' ? codigo : undefined;
+}
+
+function respuestaErrorRegistro(status: number, error: unknown): NextResponse {
+  const codigo = codigoErrorSupabase(error);
+  if (status === 429 || codigo?.includes('rate_limit')) {
+    return NextResponse.json(
+      {
+        error:
+          codigo === 'over_email_send_rate_limit'
+            ? 'Supabase limitó el envío de correos de confirmación. Espera antes de volver a intentarlo y revisa tu bandeja de entrada.'
+            : 'Supabase limitó temporalmente los registros. Espera un momento antes de volver a intentarlo.',
+      },
+      { status: 429 },
+    );
+  }
+  if (codigo === 'weak_password') {
+    return NextResponse.json(
+      {
+        error:
+          'La contraseña no cumple los requisitos de seguridad. Prueba con una más larga y menos común.',
+      },
+      { status: 400 },
+    );
+  }
+  if (codigo === 'email_address_invalid') {
+    return NextResponse.json(
+      { error: 'El correo no es válido. Revísalo e inténtalo de nuevo.' },
+      { status: 400 },
+    );
+  }
+  if (codigo === 'signup_disabled' || codigo === 'email_provider_disabled') {
+    return NextResponse.json(
+      {
+        error:
+          'El registro por correo está desactivado en Supabase. Contacta al administrador del sistema.',
+      },
+      { status: 503 },
+    );
+  }
+  if (codigo && codigo !== 'user_already_exists' && codigo !== 'email_exists') {
+    console.error('Supabase Auth rechazó el registro:', { status, code: codigo });
+  }
+  return NextResponse.json(
+    {
+      error:
+        'No fue posible crear la cuenta. Verifica los datos o intenta iniciar sesión si ya tienes una cuenta.',
+    },
+    { status: status >= 500 ? 502 : 400 },
+  );
 }
 
 export async function POST(request: Request) {
@@ -84,29 +141,17 @@ export async function POST(request: Request) {
       cache: 'no-store',
     });
   } catch {
-    return NextResponse.json(
-      { error: 'No se pudo conectar con Supabase Auth.' },
-      { status: 502 },
-    );
+    return NextResponse.json({ error: 'No se pudo conectar con Supabase Auth.' }, { status: 502 });
   }
 
   if (!signupResponse.ok) {
-    if (signupResponse.status === 429) {
-      return NextResponse.json(
-        { error: 'Demasiados intentos; inténtalo de nuevo más tarde.' },
-        { status: 429 },
-      );
+    let error: unknown;
+    try {
+      error = await signupResponse.json();
+    } catch (causa) {
+      if (!(causa instanceof SyntaxError)) throw causa;
     }
-    if (signupResponse.status >= 400 && signupResponse.status < 500) {
-      return NextResponse.json(
-        { error: 'No fue posible crear la cuenta. Verifica los datos o intenta iniciar sesión.' },
-        { status: 400 },
-      );
-    }
-    return NextResponse.json(
-      { error: 'Supabase Auth no pudo crear la cuenta.' },
-      { status: 502 },
-    );
+    return respuestaErrorRegistro(signupResponse.status, error);
   }
 
   let result: unknown;
@@ -132,7 +177,9 @@ export async function POST(request: Request) {
     (typeof signup.id === 'string' ? signup.id : undefined);
   if (!userId) {
     return NextResponse.json(
-      { error: 'Supabase no devolvió el usuario creado. Verifica si el correo ya está registrado.' },
+      {
+        error: 'Supabase no devolvió el usuario creado. Verifica si el correo ya está registrado.',
+      },
       { status: 502 },
     );
   }
@@ -144,8 +191,11 @@ export async function POST(request: Request) {
   const refreshToken =
     (typeof signup.refresh_token === 'string' ? signup.refresh_token : undefined) ??
     (typeof session?.refresh_token === 'string' ? session.refresh_token : undefined);
-  return NextResponse.json({
-    confirmationRequired: !accessToken || !refreshToken,
-    ...(input.data.accountType === 'page_admin' ? { requestPending: true } : {}),
-  }, { status: 201 });
+  return NextResponse.json(
+    {
+      confirmationRequired: !accessToken || !refreshToken,
+      ...(input.data.accountType === 'page_admin' ? { requestPending: true } : {}),
+    },
+    { status: 201 },
+  );
 }
