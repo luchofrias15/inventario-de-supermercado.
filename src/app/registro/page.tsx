@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
-import { TurnstileCaptcha } from '@/components/auth/TurnstileCaptcha';
 
 const TIPOS_CUENTA = [
   { value: 'customer', label: 'Cliente', detail: 'Consultar productos e inventario.' },
@@ -30,25 +29,11 @@ export default function RegistroPage() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [loading, setLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState('');
-  const [captchaResetSignal, setCaptchaResetSignal] = useState(0);
-  const [captchaError, setCaptchaError] = useState('');
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
     setMensaje('');
-    if (!turnstileSiteKey) {
-      setError(
-        'El registro está pendiente de configuración de seguridad. Contacta al administrador.',
-      );
-      return;
-    }
-    if (!captchaToken) {
-      setError('Completa la verificación CAPTCHA antes de crear la cuenta.');
-      return;
-    }
     if (password !== confirmacion) {
       setError('Las contraseñas no coinciden.');
       return;
@@ -59,7 +44,7 @@ export default function RegistroPage() {
       const response = await fetch('/api/auth/registro', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ nombre, email, password, accountType, storeName, captchaToken }),
+        body: JSON.stringify({ nombre, email, password, accountType, storeName }),
       });
       const result = (await response.json()) as {
         error?: string;
@@ -87,7 +72,6 @@ export default function RegistroPage() {
       setError('No se pudo conectar con el servidor.');
     } finally {
       setLoading(false);
-      setCaptchaResetSignal((signal) => signal + 1);
     }
   }
 
@@ -179,24 +163,6 @@ export default function RegistroPage() {
             required
           />
         </label>
-        {turnstileSiteKey ? (
-          <TurnstileCaptcha
-            siteKey={turnstileSiteKey}
-            resetSignal={captchaResetSignal}
-            onToken={setCaptchaToken}
-            onError={setCaptchaError}
-          />
-        ) : (
-          <p role="alert" className="mt-5 text-sm text-amber-300">
-            El registro no está disponible hasta que el administrador configure Cloudflare
-            Turnstile.
-          </p>
-        )}
-        {captchaError && (
-          <p role="alert" className="mt-2 text-sm text-red-400">
-            {captchaError}
-          </p>
-        )}
         {error && (
           <p role="alert" className="mt-3 text-sm text-red-600">
             {error}
@@ -208,16 +174,10 @@ export default function RegistroPage() {
           </p>
         )}
         <button
-          disabled={loading || !turnstileSiteKey || !captchaToken}
+          disabled={loading}
           className="auth-primary-button mt-6 w-full rounded-lg py-3 font-bold disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading
-            ? 'Creando cuenta...'
-            : !turnstileSiteKey
-              ? 'Registro no configurado'
-              : !captchaToken
-                ? 'Verifica que no eres un robot'
-                : 'Crear cuenta'}
+          {loading ? 'Creando cuenta...' : 'Crear cuenta'}
         </button>
         <p className="mt-5 text-center text-sm text-slate-300">
           ¿Ya tienes cuenta?{' '}

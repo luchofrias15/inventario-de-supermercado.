@@ -11,7 +11,6 @@ const registroSchema = z
     password: z.string().min(8).max(1024),
     accountType: z.enum(['customer', 'store_admin', 'page_admin']).default('customer'),
     storeName: z.string().trim().max(120).optional(),
-    captchaToken: z.string().trim().min(1).max(4096),
   })
   .superRefine((data, context) => {
     if (data.accountType === 'store_admin' && !data.storeName) {
@@ -46,15 +45,6 @@ function codigoErrorSupabase(error: unknown): string | undefined {
 
 function respuestaErrorRegistro(status: number, error: unknown): NextResponse {
   const codigo = codigoErrorSupabase(error);
-  if (codigo?.includes('captcha')) {
-    return NextResponse.json(
-      {
-        error:
-          'Supabase no pudo validar el CAPTCHA. Completa de nuevo la verificación e inténtalo otra vez.',
-      },
-      { status: 400 },
-    );
-  }
   if (status === 429 || codigo?.includes('rate_limit')) {
     return NextResponse.json(
       {
@@ -147,7 +137,6 @@ export async function POST(request: Request) {
           account_type: input.data.accountType,
           ...(input.data.storeName ? { store_name: input.data.storeName } : {}),
         },
-        gotrue_meta_security: { captcha_token: input.data.captchaToken },
       }),
       cache: 'no-store',
     });
