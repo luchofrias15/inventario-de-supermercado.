@@ -5,13 +5,7 @@ import { paraReordenar } from '@/lib/reglas/alertas';
 import { estadoVencimiento } from '@/lib/reglas/vencimiento';
 import { hoyBogota } from '@/lib/reglas/fechas';
 import { validarProducto } from '@/lib/reglas/producto';
-import type {
-  DatosProducto,
-  DetalleProducto,
-  FilaInventario,
-  Lote,
-  Movimiento,
-} from './tipos';
+import type { DatosProducto, DetalleProducto, FilaInventario, Lote, Movimiento } from './tipos';
 
 interface ProductoDb {
   id: string;
@@ -40,10 +34,11 @@ interface MovimientoDb {
 }
 
 export async function obtenerTiendaPredeterminada(): Promise<string> {
-  const [tienda] = await consultar<{ id: string }>(
-    'SELECT id FROM stores WHERE is_default = true',
-  );
-  if (!tienda) throw new Error('No existe una tienda predeterminada; aplica las migraciones de roles y tiendas.');
+  const [tienda] = await consultar<{ id: string }>('SELECT id FROM stores WHERE is_default = true');
+  if (!tienda)
+    throw new Error(
+      'No existe una tienda predeterminada; aplica las migraciones de roles y tiendas.',
+    );
   return tienda.id;
 }
 
@@ -57,9 +52,7 @@ function mapearInventario(producto: ProductoDb): FilaInventario {
     codigo: producto.codigo,
     nombre: producto.nombre,
     categoria: producto.categoria,
-    precioUnitario: producto.precio_unitario === null
-      ? null
-      : Number(producto.precio_unitario),
+    precioUnitario: producto.precio_unitario === null ? null : Number(producto.precio_unitario),
     proveedor: producto.proveedor,
     puntoReorden: producto.punto_reorden,
     stockDisponible: producto.stock_hoy,
@@ -74,10 +67,13 @@ const STOCK_HOY_SQL = `COALESCE((
     AND (l.fecha_vencimiento IS NULL OR l.fecha_vencimiento >= $1::date)
 ), 0)::integer`;
 
-export async function listarInventario(filtros: {
-  soloReorden?: boolean;
-  busqueda?: string;
-} = {}, storeId?: string): Promise<FilaInventario[]> {
+export async function listarInventario(
+  filtros: {
+    soloReorden?: boolean;
+    busqueda?: string;
+  } = {},
+  storeId?: string,
+): Promise<FilaInventario[]> {
   const hoy = hoyBogota();
   const valores: unknown[] = [hoy];
   const condiciones = ['v.activo = true'];
@@ -134,6 +130,33 @@ export async function crearProducto(
     }
     throw error;
   }
+}
+
+export async function actualizarPrecioProducto(
+  codigo: string,
+  precioUnitario: number,
+  storeId: string,
+): Promise<{ id: string; codigo: string; precioUnitario: number }> {
+  if (!Number.isSafeInteger(precioUnitario) || precioUnitario <= 0) {
+    throw new ErrorDeNegocio('DATOS_INVALIDOS');
+  }
+  const [producto] = await consultar<{
+    id: string;
+    codigo: string;
+    precio_unitario: number | string;
+  }>(
+    `UPDATE productos
+     SET precio_unitario = $1
+     WHERE codigo = $2 AND store_id = $3 AND activo = true
+     RETURNING id, codigo, precio_unitario`,
+    [precioUnitario, codigo, storeId],
+  );
+  if (!producto) throw new ErrorDeNegocio('PRODUCTO_NO_ENCONTRADO');
+  return {
+    id: producto.id,
+    codigo: producto.codigo,
+    precioUnitario: Number(producto.precio_unitario),
+  };
 }
 
 export async function obtenerProducto(codigo: string, storeId?: string): Promise<DetalleProducto> {

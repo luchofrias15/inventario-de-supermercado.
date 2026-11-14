@@ -2,7 +2,9 @@ import { z } from 'zod';
 import { CATEGORIAS } from '@/lib/config/tienda';
 import { esFechaValida } from '@/lib/reglas/fechas';
 
-const esquemaFecha = z.string().refine(esFechaValida, 'Use una fecha válida en formato YYYY-MM-DD.');
+const esquemaFecha = z
+  .string()
+  .refine(esFechaValida, 'Use una fecha válida en formato YYYY-MM-DD.');
 
 export const esquemaProducto = z.object({
   codigo: z.string().trim().min(1).max(40),
@@ -10,6 +12,10 @@ export const esquemaProducto = z.object({
   categoria: z.enum(CATEGORIAS),
   precioUnitario: z.number().int().positive().max(999999999999),
   proveedor: z.string().trim().max(120).optional(),
+});
+
+export const esquemaPrecioProducto = z.object({
+  precioUnitario: z.number().int().positive().max(999999999999),
 });
 
 export const esquemaEntrada = z.object({
@@ -25,17 +31,23 @@ export const esquemaSalida = z.object({
 });
 
 export const esquemaCrearPedido = z.object({
-  items: z.array(z.object({
-    productId: z.string().uuid(),
-    cantidad: z.number().int().min(1).max(100),
-  })).min(1).max(30).superRefine((items, contexto) => {
-    if (new Set(items.map((item) => item.productId)).size !== items.length) {
-      contexto.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'El carrito contiene productos repetidos.',
-      });
-    }
-  }),
+  items: z
+    .array(
+      z.object({
+        productId: z.string().uuid(),
+        cantidad: z.number().int().min(1).max(100),
+      }),
+    )
+    .min(1)
+    .max(30)
+    .superRefine((items, contexto) => {
+      if (new Set(items.map((item) => item.productId)).size !== items.length) {
+        contexto.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'El carrito contiene productos repetidos.',
+        });
+      }
+    }),
   nombre: z.string().trim().min(1).max(120),
   telefono: z.string().trim().min(7).max(30),
   direccion: z.string().trim().min(5).max(240),

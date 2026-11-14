@@ -8,6 +8,7 @@ export {
 export type { FilaTienda } from '@/lib/datos/tiendas';
 export { cerrarPool } from '@/lib/datos/conexion';
 export {
+  actualizarPrecioProducto,
   crearProducto,
   desactivarProducto,
   listarInventario,
