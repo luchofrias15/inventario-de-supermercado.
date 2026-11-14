@@ -1,5 +1,5 @@
-import InventoryDashboard from '@/components/inventory/InventoryDashboard';
+import { redirect } from 'next/navigation';
 
 export default function DashboardPage() {
-  return <InventoryDashboard />;
+  redirect('/tienda');
 }

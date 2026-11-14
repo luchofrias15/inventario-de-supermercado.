@@ -9,6 +9,16 @@ const eslintConfig = [
     'next-env.d.ts',
   ]),
   {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        URL: 'readonly',
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
+  {
     rules: {
       'no-undef': 'error',
       'no-unused-vars': 'off',

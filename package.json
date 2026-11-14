@@ -10,10 +10,16 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "db:migrar": "node scripts/migrar.mjs",
+    "db:verificar": "node scripts/verificar-bd.mjs",
+    "db:limpiar": "node scripts/limpiar-prueba.mjs",
+    "db:demo": "tsx scripts/cargar-demo.ts",
+    "probar:flujo": "tsx scripts/probar-flujo.ts",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {
     "next": "^16.3.5",
+    "pg": "^8.23.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.0.12",
@@ -24,6 +30,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@types/node": "^22.13.10",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
@@ -31,6 +38,7 @@
     "eslint-config-next": "^16.3.5",
     "jsdom": "^26.0.0",
     "prettier": "^3.5.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.8.2",
     "vitest": "^3.0.8"
   }
