@@ -16,7 +16,7 @@
 
 ## Verificación local
 
-- `npm test`: 9 archivos, 34 pruebas correctas.
+- `npm test`: 10 archivos, 38 pruebas correctas.
 - `npm run probar:flujo`: 14 escenarios correctos, 0 fallas; limpió solo los
   registros de prueba.
 - `npm run db:verificar`: 0 fallas; demos conservados (2 productos, 4 lotes y
@@ -27,6 +27,13 @@
   desde `src/lib/json-db.ts`, usado por el endpoint JSON legado.
 - Peticiones anónimas: `/tienda` redirige; `/api/tienda/sesion` y
   `/api/data/products` responden `401`.
+- La interfaz local de login y el enlace a Crear cuenta cargan. `/tienda` sin
+  sesión responde `307` hacia `/login`; `/api/tienda/sesion` responde `401`.
+- A-01 a A-10 tienen resultados de flujo automatizado local documentados en
+  `doc/ACEPTACION.md`; A-13 tiene confirmación de datos persistidos en
+  PostgreSQL, no una prueba de cierre/reingreso en navegador.
 
-La aceptación A-01 a A-10 y A-13 debe ejecutarse en Vercel y registrarse en
-`doc/ACEPTACION.md`. La prueba autenticada/visual requiere la cuenta del usuario.
+La aceptación final en Vercel y la prueba autenticada/visual siguen pendientes:
+el panel del proyecto indica “No Production Deployment” y pide iniciar sesión
+para inspeccionar otros despliegues. La aceptación remota no se sustituye con
+las pruebas locales.

@@ -13,8 +13,8 @@ P-INIT no aplica: el proyecto Next.js ya existe. Las fases restantes siguen el o
 | P05 | Implementado; autenticación real pendiente | Endpoints protegidos para sesión, productos, entradas, salidas y alertas; probado el rechazo sin sesión. |
 | P06 | Implementado; prueba visual pendiente | Inventario adaptable, búsqueda, filtro de reorden y alertas. |
 | P07 | Implementado; prueba visual pendiente | Alta de producto, entradas y detalle de lotes/movimientos. |
-| P08 | Implementado; aceptación en Vercel pendiente | Venta FEFO, revisión de seguridad, pruebas locales y tabla A-01 a A-13 creada. |
-| P09 | Pendiente / opcional | Alertas de vencimiento y reporte de rotación; solo después de cerrar P08. |
+| P08 | Implementado; aceptación en Vercel pendiente | Venta FEFO; pruebas locales correctas. Vercel informa que no hay Production Deployment. |
+| P09 | Implementado; prueba visual autenticada pendiente | Alertas de vencimiento y reporte de rotación; consultas de solo lectura verificadas en PostgreSQL. |
 
 ## Bitácora
 
@@ -70,4 +70,15 @@ No se han creado commits.
 - P08: formulario de venta conectado a `POST /api/tienda/salidas`, muestra stock, resultado y disponibilidad en rechazos `STOCK_INSUFICIENTE`. La venta existente descuenta lotes mediante FEFO dentro de una transacción.
 - Revisión de reglas: el stock se deriva de lotes no vencidos; las filas vendibles se bloquean al vender; la validación del servidor impide stock negativo, lotes vencidos, fechas faltantes en perecederos y cantidades no positivas. Las consultas SQL usan parámetros. Las fechas de negocio usan `hoyBogota()` y los estados incluyen texto, no solo color.
 - La cuenta confirmó la rotación previa de las credenciales expuestas. `.env.local` está ignorado y `.env.example` contiene solo nombres de variables sin valores.
-- Creada `doc/ACEPTACION.md` con A-01 a A-13 y las columnas de resultado/evidencia vacías. La aceptación en Vercel, la inspección visual móvil y los flujos autenticados requieren la cuenta y el despliegue del usuario.
+- Creada `doc/ACEPTACION.md` con A-01 a A-13 y resultados locales diferenciados de la aceptación remota.
+- Revalidación P08: `npm test` 38/38; `npm run probar:flujo` 14 escenarios, 0 fallas; `npm run db:verificar` 0 fallas; `npm run lint`, `npm run type-check` y `npm run build` correctos. La limpieza dejó 2 productos demo, 4 lotes y 4 movimientos.
+- `/tienda` anónimo respondió 307 a `/login`; `/api/tienda/sesion` respondió 401. La interfaz local de login cargó y muestra el enlace Crear cuenta.
+- A-01 a A-10 tienen evidencia de flujo local en `doc/ACEPTACION.md`; A-13 tiene confirmación de persistencia en PostgreSQL, no una prueba de cierre/reingreso en navegador. El panel de Vercel muestra “No Production Deployment” y requiere iniciar sesión para ver despliegues. Falta publicar el proyecto y repetir criterios e inspección visual en Vercel; no se modificaron datos productivos.
+
+### P09 · Opcionales · 2026-11-14
+
+- Implementados `lotesPorVencer()` y `reporteRotacion(desde, hasta)` en `lib/datos/`, reexportados por `dataService`; ambos usan SQL parametrizado y consultas de solo lectura.
+- Añadidos `GET /api/tienda/vencimientos` y `GET /api/tienda/rotacion`; ambos exigen sesión. La ruta de rotación valida el rango inclusivo `desde`–`hasta`.
+- Añadidas `/tienda/vencimientos` y `/tienda/rotacion`, con estados textuales, listas adaptables y selector de fechas.
+- Verificación de solo lectura del demo (2026-11-14): `DEMO-LECHE` tiene 5 unidades por vencer el 2026-11-17 y 2 vencidas desde 2026-11-12. En el rango 2026-11-01–2026-11-14, `DEMO-ARROZ` y `DEMO-LECHE` registran 0 ventas; están empatados y el orden alfabético desempata. No se modificaron datos.
+- El panel de Vercel indica que no hay despliegue de producción. Las pantallas autenticadas no pueden validarse visualmente allí hasta que el propietario publique la aplicación.

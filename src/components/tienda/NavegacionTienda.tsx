@@ -10,6 +10,8 @@ const ENLACES = [
   { href: '/tienda', etiqueta: 'Inventario' },
   { href: '/tienda/entrada', etiqueta: 'Entrada' },
   { href: '/tienda/venta', etiqueta: 'Venta' },
+  { href: '/tienda/vencimientos', etiqueta: 'Vencimientos' },
+  { href: '/tienda/rotacion', etiqueta: 'Rotación' },
 ];
 
 export function NavegacionTienda({ email }: { email: string }) {

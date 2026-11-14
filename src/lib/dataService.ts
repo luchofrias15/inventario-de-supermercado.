@@ -9,12 +9,15 @@ export {
 } from '@/lib/datos/productos';
 export { registrarEntrada } from '@/lib/datos/entradas';
 export { registrarSalida } from '@/lib/datos/salidas';
+export { lotesPorVencer } from '@/lib/datos/alertas';
+export { reporteRotacion } from '@/lib/datos/reportes';
 export type {
   DatosEntrada,
   DatosProducto,
   DetalleProducto,
   FilaInventario,
   FilaLote,
+  FilaLoteVencimiento,
   FilaRotacion,
   Lote,
   Movimiento,

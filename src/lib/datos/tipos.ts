@@ -57,6 +57,10 @@ export interface FilaLote extends Lote {
   nombre: string;
 }
 
+export type FilaLoteVencimiento =
+  | (FilaLote & { fechaVencimiento: string; estadoVencimiento: 'por_vencer' })
+  | (FilaLote & { fechaVencimiento: string; estadoVencimiento: 'vencido' });
+
 export interface FilaRotacion {
   codigo: string;
   nombre: string;

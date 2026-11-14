@@ -10,6 +10,8 @@ Auth y PostgreSQL. Administra productos, entradas por lote, ventas y alertas.
 - Stock disponible derivado de los lotes vigentes, no de un campo editable.
 - Ventas transaccionales con FEFO (se descuenta primero el lote que vence antes).
 - Alertas de reorden cuando el stock disponible es 10 unidades o menos.
+- Alertas de lotes próximos a vencer y vencidos con existencias.
+- Reporte de rotación por rango de fechas, ordenado por unidades vendidas.
 - Validación de vencimiento: los lotes perecederos requieren fecha; los lotes
   vencidos no se venden y los que vencen dentro de 5 días se identifican como
   próximos a vencer.
@@ -60,6 +62,9 @@ Las rutas de `/api/tienda` requieren una sesión válida. `/api/health` es públ
 El antiguo endpoint `/api/data/[collection]` se conserva para compatibilidad,
 pero también requiere autenticación y usa el almacenamiento JSON local; la
 interfaz actual de `/tienda` usa PostgreSQL.
+
+En `/tienda/vencimientos` se consultan los lotes por vencer o vencidos. En
+`/tienda/rotacion` se filtra el total de unidades vendidas con fechas inclusivas.
 
 ## Comandos
 
