@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
@@ -50,6 +51,12 @@ export default function LoginPage() {
         <button disabled={loading} className="mt-6 w-full rounded bg-slate-900 py-3 font-semibold text-white disabled:opacity-60">
           {loading ? 'Iniciando sesion...' : 'Entrar'}
         </button>
+        <p className="mt-5 text-center text-sm text-slate-600">
+          ¿No tienes cuenta?{' '}
+          <Link href="/registro" className="font-semibold text-slate-900 underline underline-offset-4">
+            Crear cuenta
+          </Link>
+        </p>
       </form>
     </main>
   );

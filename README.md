@@ -47,7 +47,9 @@ npm run dev
 ```
 
 Abre `http://localhost:3000/login`. Para verificar el módulo desde el navegador,
-inicia sesión con un usuario de Supabase Auth.
+inicia sesión con un usuario de Supabase Auth o selecciona **Crear cuenta**.
+La creación usa Supabase Auth y puede requerir confirmar el correo, según la
+configuración de autenticación del proyecto.
 
 ## Autenticación y datos
 
