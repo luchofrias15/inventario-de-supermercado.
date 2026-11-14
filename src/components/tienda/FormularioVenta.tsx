@@ -9,7 +9,13 @@ import { Selector } from '@/components/ui/Selector';
 import { ErrorApi, leerRespuestaApi } from '@/lib/clienteApi';
 import type { FilaInventario, ResultadoSalida } from '@/lib/datos/tipos';
 
-export function FormularioVenta({ productos }: { productos: FilaInventario[] }) {
+export function FormularioVenta({
+  productos,
+  storeId,
+}: {
+  productos: FilaInventario[];
+  storeId: string;
+}) {
   const router = useRouter();
   const [codigo, setCodigo] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -28,11 +34,14 @@ export function FormularioVenta({ productos }: { productos: FilaInventario[] }) 
     const cantidad = Number(new FormData(evento.currentTarget).get('cantidad'));
 
     try {
-      const respuesta = await fetch('/api/tienda/salidas', {
+      const respuesta = await fetch(
+        `/api/tienda/salidas?storeId=${encodeURIComponent(storeId)}`,
+        {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ codigo, cantidad }),
-      });
+        },
+      );
       const salida = await leerRespuestaApi<ResultadoSalida>(respuesta);
       setMensaje(
         salida.paraReordenar

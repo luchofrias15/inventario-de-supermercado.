@@ -13,14 +13,14 @@ interface StockDb {
   stock: number;
 }
 
-export async function registrarEntrada(datos: DatosEntrada): Promise<{ stock: number }> {
+export async function registrarEntrada(datos: DatosEntrada, storeId: string): Promise<{ stock: number }> {
   return conTransaccion(async (transaccion) => {
     const productos = await transaccion.query<ProductoEntradaDb>(
       `SELECT id, categoria
        FROM productos
-       WHERE codigo = $1 AND activo = true
+       WHERE codigo = $1 AND store_id = $2 AND activo = true
        FOR UPDATE`,
-      [datos.codigo],
+      [datos.codigo, storeId],
     );
     const producto = productos.rows[0];
     if (!producto) throw new ErrorDeNegocio('PRODUCTO_NO_ENCONTRADO');

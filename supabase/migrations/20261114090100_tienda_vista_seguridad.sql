@@ -1,5 +1,7 @@
 -- M2: vista con stock disponible y estado de reorden; cierre de acceso público
 
+DROP VIEW IF EXISTS public.v_productos;
+
 CREATE OR REPLACE VIEW v_productos
 WITH (security_invoker = true) AS
 SELECT

@@ -5,6 +5,7 @@ import {
   crearProducto,
   listarInventario,
   obtenerProducto,
+  obtenerTiendaPredeterminada,
   productosParaReordenar,
   registrarEntrada,
   registrarSalida,
@@ -56,11 +57,13 @@ async function ejecutar(): Promise<void> {
   });
 
   const hoy = hoyBogota();
+  const storeId = await obtenerTiendaPredeterminada();
   await crearProducto({
     codigo: 'TD-TEST-1',
     nombre: 'Leche de prueba',
     categoria: 'perecedero',
-  });
+    precioUnitario: 2800,
+  }, storeId);
   reportar('1. Crear TD-TEST-1 con stock inicial cero', true);
 
   await debeRechazar(
@@ -70,7 +73,8 @@ async function ejecutar(): Promise<void> {
         codigo: 'TD-TEST-1',
         nombre: 'Leche duplicada',
         categoria: 'perecedero',
-      }),
+        precioUnitario: 2800,
+      }, storeId),
     'PRODUCTO_DUPLICADO',
   );
 
@@ -78,12 +82,13 @@ async function ejecutar(): Promise<void> {
     codigo: 'TD-TEST-2',
     nombre: 'Arroz de prueba',
     categoria: 'no_perecedero',
-  });
+    precioUnitario: 3200,
+  }, storeId);
   reportar('3. Crear TD-TEST-2 no perecedero', true);
 
   await debeRechazar(
     '4. Exigir vencimiento al perecedero',
-    () => registrarEntrada({ codigo: 'TD-TEST-1', cantidad: 8, fechaEntrada: hoy }),
+    () => registrarEntrada({ codigo: 'TD-TEST-1', cantidad: 8, fechaEntrada: hoy }, storeId),
     'DATOS_INVALIDOS',
   );
 
@@ -92,7 +97,7 @@ async function ejecutar(): Promise<void> {
     cantidad: 8,
     fechaEntrada: hoy,
     fechaVencimiento: desplazarFecha(hoy, 3),
-  });
+  }, storeId);
   reportar('5. Registrar primer lote de leche', lechePrimera.stock === 8);
 
   const lecheSegunda = await registrarEntrada({
@@ -100,17 +105,17 @@ async function ejecutar(): Promise<void> {
     cantidad: 5,
     fechaEntrada: hoy,
     fechaVencimiento: desplazarFecha(hoy, 20),
-  });
+  }, storeId);
   reportar('6. Registrar segundo lote de leche', lecheSegunda.stock === 13);
 
   const arrozEntrada = await registrarEntrada({
     codigo: 'TD-TEST-2',
     cantidad: 8,
     fechaEntrada: hoy,
-  });
+  }, storeId);
   reportar('7. Registrar entrada no perecedera sin vencimiento', arrozEntrada.stock === 8);
 
-  const inventario = await listarInventario();
+  const inventario = await listarInventario({}, storeId);
   const lecheAntes = inventario.find((producto) => producto.codigo === 'TD-TEST-1');
   const arrozAntes = inventario.find((producto) => producto.codigo === 'TD-TEST-2');
   reportar(
@@ -122,8 +127,8 @@ async function ejecutar(): Promise<void> {
     'Leche 13 normal; Arroz 8 para reordenar (RN-01, aunque el texto del plan dice que 8 no alerta)',
   );
 
-  const ventaLeche = await registrarSalida('TD-TEST-1', 10);
-  const lecheDespues = await obtenerProducto('TD-TEST-1');
+  const ventaLeche = await registrarSalida('TD-TEST-1', 10, storeId);
+  const lecheDespues = await obtenerProducto('TD-TEST-1', storeId);
   const primerLote = lecheDespues.lotes.find(
     (lote) => lote.fechaVencimiento === desplazarFecha(hoy, 3),
   );
@@ -140,13 +145,13 @@ async function ejecutar(): Promise<void> {
 
   await debeRechazar(
     '10. Rechazar venta superior al stock',
-    () => registrarSalida('TD-TEST-2', 20),
+    () => registrarSalida('TD-TEST-2', 20, storeId),
     'STOCK_INSUFICIENTE',
   );
-  const arrozTrasRechazo = await obtenerProducto('TD-TEST-2');
+  const arrozTrasRechazo = await obtenerProducto('TD-TEST-2', storeId);
   reportar('10. Conservar stock después del rechazo', arrozTrasRechazo.stockDisponible === 8);
 
-  const ventaIgual = await registrarSalida('TD-TEST-2', 8);
+  const ventaIgual = await registrarSalida('TD-TEST-2', 8, storeId);
   reportar(
     '11. Permitir venta igual al stock',
     ventaIgual.stock === 0 && ventaIgual.paraReordenar,
@@ -160,31 +165,31 @@ async function ejecutar(): Promise<void> {
         cantidad: 1,
         fechaEntrada: hoy,
         fechaVencimiento: desplazarFecha(hoy, -1),
-      }),
+      }, storeId),
     'FECHA_INVALIDA',
   );
 
-  const paraReorden = await productosParaReordenar();
+  const paraReorden = await productosParaReordenar(storeId);
   const codigosReorden = new Set(paraReorden.map((producto) => producto.codigo));
   reportar(
     '13. Listar ambos productos bajo el umbral de reorden',
     codigosReorden.has('TD-TEST-1') && codigosReorden.has('TD-TEST-2'),
   );
 
-  await registrarSalida('TD-TEST-1', 3);
+  await registrarSalida('TD-TEST-1', 3, storeId);
   await registrarEntrada({
     codigo: 'TD-TEST-1',
     cantidad: 4,
     fechaEntrada: desplazarFecha(hoy, -10),
     fechaVencimiento: desplazarFecha(hoy, -2),
-  });
-  const productoConVencido = await obtenerProducto('TD-TEST-1');
+  }, storeId);
+  const productoConVencido = await obtenerProducto('TD-TEST-1', storeId);
   const loteVencido = productoConVencido.lotes.find(
     (lote) => lote.fechaVencimiento === desplazarFecha(hoy, -2),
   );
   await debeRechazar(
     '14. No vender un lote vencido cuando no hay stock vigente',
-    () => registrarSalida('TD-TEST-1', 1),
+    () => registrarSalida('TD-TEST-1', 1, storeId),
     'STOCK_INSUFICIENTE',
   );
   reportar(

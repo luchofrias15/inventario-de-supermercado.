@@ -4,20 +4,29 @@ import { Aviso } from '@/components/ui/Aviso';
 import { InsigniaEstado } from '@/components/tienda/InsigniaEstado';
 import { ListaMovimientos, TablaLotes } from '@/components/tienda/TablaLotes';
 import { Tarjeta } from '@/components/ui/Tarjeta';
-import { obtenerProducto } from '@/lib/dataService';
+import { exigirTiendaOperativa, obtenerProducto, obtenerTienda } from '@/lib/dataService';
 import { ErrorDeNegocio } from '@/lib/reglas/errores';
+import { exigirSesion } from '@/lib/auth/sesion';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DetalleProductoPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ codigo: string }>;
+  searchParams: Promise<{ storeId?: string | string[] }>;
 }) {
   const { codigo } = await params;
+  const sesion = await exigirSesion();
+  if (sesion.role === 'user') notFound();
+  const parametros = await searchParams;
+  const requestedStoreId = typeof parametros.storeId === 'string' ? parametros.storeId : undefined;
+  const storeId = await exigirTiendaOperativa(sesion, requestedStoreId);
+  const tienda = await obtenerTienda(storeId);
   let producto;
   try {
-    producto = await obtenerProducto(codigo);
+    producto = await obtenerProducto(codigo, storeId);
   } catch (error) {
     if (error instanceof ErrorDeNegocio && error.codigo === 'PRODUCTO_NO_ENCONTRADO') notFound();
     throw error;
@@ -26,8 +35,8 @@ export default async function DetalleProductoPage({
   return (
     <>
       <div>
-        <Link href="/tienda" className="text-sm font-medium text-primario hover:underline">
-          Volver al inventario
+        <Link href={`/tienda?storeId=${encodeURIComponent(storeId)}`} className="text-sm font-medium text-primario hover:underline">
+          Volver a {tienda?.nombre}
         </Link>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-bold">{producto.nombre}</h1>

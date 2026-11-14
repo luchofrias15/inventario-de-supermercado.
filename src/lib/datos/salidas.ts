@@ -18,15 +18,16 @@ interface LoteSalidaDb {
 export async function registrarSalida(
   codigo: string,
   cantidad: number,
+  storeId: string,
 ): Promise<ResultadoSalida> {
   validarCantidad(cantidad);
   return conTransaccion(async (transaccion) => {
     const productos = await transaccion.query<ProductoSalidaDb>(
       `SELECT id, punto_reorden
        FROM productos
-       WHERE codigo = $1 AND activo = true
+       WHERE codigo = $1 AND store_id = $2 AND activo = true
        FOR UPDATE`,
-      [codigo],
+      [codigo, storeId],
     );
     const producto = productos.rows[0];
     if (!producto) throw new ErrorDeNegocio('PRODUCTO_NO_ENCONTRADO');

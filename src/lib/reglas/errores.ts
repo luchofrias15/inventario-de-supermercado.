@@ -1,6 +1,7 @@
 export type CodigoError =
   | 'DATOS_INVALIDOS'
   | 'NO_AUTORIZADO'
+  | 'PERMISO_DENEGADO'
   | 'PRODUCTO_DUPLICADO'
   | 'PRODUCTO_NO_ENCONTRADO'
   | 'STOCK_INSUFICIENTE'
@@ -11,6 +12,7 @@ export type CodigoError =
 export const MENSAJES: Record<CodigoError, string> = {
   DATOS_INVALIDOS: 'Revise los datos ingresados.',
   NO_AUTORIZADO: 'Debe iniciar sesión.',
+  PERMISO_DENEGADO: 'No tiene permisos para realizar esta acción.',
   PRODUCTO_DUPLICADO: 'Ya existe un producto con ese código.',
   PRODUCTO_NO_ENCONTRADO: 'El producto no existe.',
   STOCK_INSUFICIENTE: 'No hay stock suficiente para la venta.',
@@ -22,6 +24,7 @@ export const MENSAJES: Record<CodigoError, string> = {
 export const ESTADO_HTTP: Record<CodigoError, number> = {
   DATOS_INVALIDOS: 400,
   NO_AUTORIZADO: 401,
+  PERMISO_DENEGADO: 403,
   PRODUCTO_DUPLICADO: 409,
   PRODUCTO_NO_ENCONTRADO: 404,
   STOCK_INSUFICIENTE: 409,

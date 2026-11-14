@@ -15,7 +15,7 @@ interface ProductoCreado {
   codigo: string;
 }
 
-export function FormularioProducto() {
+export function FormularioProducto({ storeId }: { storeId: string }) {
   const router = useRouter();
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
@@ -34,18 +34,24 @@ export function FormularioProducto() {
       codigo: String(formulario.get('codigo') ?? '').trim(),
       nombre: String(formulario.get('nombre') ?? '').trim(),
       categoria,
+      precioUnitario: Number(formulario.get('precioUnitario')),
       proveedor: String(formulario.get('proveedor') ?? '').trim() || undefined,
     };
 
     try {
-      const respuesta = await fetch('/api/tienda/productos', {
+      const respuesta = await fetch(
+        `/api/tienda/productos?storeId=${encodeURIComponent(storeId)}`,
+        {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(datos),
-      });
+        },
+      );
       const producto = await leerRespuestaApi<ProductoCreado>(respuesta);
       setCodigo(producto.codigo);
-      router.push(`/tienda/productos/${encodeURIComponent(producto.codigo)}`);
+      router.push(
+        `/tienda/productos/${encodeURIComponent(producto.codigo)}?storeId=${encodeURIComponent(storeId)}`,
+      );
       router.refresh();
     } catch (causa) {
       setError(causa instanceof Error ? causa.message : 'No se pudo crear el producto.');
@@ -78,6 +84,17 @@ export function FormularioProducto() {
         <option value="perecedero">Perecedero</option>
         <option value="no_perecedero">No perecedero</option>
       </Selector>
+      <Campo
+        id="producto-precio-unitario"
+        name="precioUnitario"
+        etiqueta="Precio por unidad (COP)"
+        type="number"
+        min="1"
+        max="999999999999.99"
+        step="1"
+        inputMode="decimal"
+        required
+      />
       <Campo
         id="producto-proveedor"
         name="proveedor"

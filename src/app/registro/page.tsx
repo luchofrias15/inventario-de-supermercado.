@@ -3,11 +3,19 @@
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
 
+const TIPOS_CUENTA = [
+  { value: 'customer', label: 'Cliente', detail: 'Consultar productos e inventario.' },
+  { value: 'store_admin', label: 'Administrador de tu tienda', detail: 'Crear y administrar tu propio inventario.' },
+  { value: 'page_admin', label: 'Administrador de la página', detail: 'Requiere aprobación del administrador actual.' },
+] as const;
+
 export default function RegistroPage() {
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
+  const [accountType, setAccountType] = useState<'customer' | 'store_admin' | 'page_admin'>('customer');
+  const [storeName, setStoreName] = useState('');
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,22 +34,26 @@ export default function RegistroPage() {
       const response = await fetch('/api/auth/registro', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ nombre, email, password }),
+        body: JSON.stringify({ nombre, email, password, accountType, storeName }),
       });
       const result = (await response.json()) as {
         error?: string;
         confirmationRequired?: boolean;
+        requestPending?: boolean;
       };
       if (!response.ok) {
         setError(result.error ?? 'No se pudo crear la cuenta.');
         return;
       }
 
-      setMensaje(
-        result.confirmationRequired
-          ? 'Cuenta creada. Revisa tu correo y confirma la dirección antes de iniciar sesión.'
-          : 'Cuenta creada. Ya puedes iniciar sesión.',
-      );
+      const estadoCuenta = result.requestPending
+        ? 'Tu solicitud para administrar la página quedó pendiente de aprobación.'
+        : accountType === 'store_admin'
+          ? 'Tu cuenta de administrador de tienda quedó creada.'
+          : 'Tu cuenta de cliente quedó creada.';
+      setMensaje(result.confirmationRequired
+        ? `${estadoCuenta} Revisa tu correo y confirma la dirección antes de iniciar sesión.`
+        : `${estadoCuenta} Ya puedes iniciar sesión.`);
       setPassword('');
       setConfirmacion('');
     } catch {
@@ -56,8 +68,39 @@ export default function RegistroPage() {
       <form onSubmit={submit} className="auth-card w-full max-w-md rounded-2xl p-8">
         <h1 className="text-2xl font-bold text-white">Crear cuenta</h1>
         <p className="mt-2 text-sm text-slate-300">
-          Regístrate para administrar el inventario de tu tienda.
+          Elige el tipo de cuenta que quieres crear.
         </p>
+        <fieldset className="mt-6 space-y-3">
+          <legend className="text-sm font-medium">Tipo de cuenta</legend>
+          {TIPOS_CUENTA.map((option) => (
+            <label key={option.value} className="flex cursor-pointer gap-3 rounded-lg border border-white/15 p-3">
+              <input
+                type="radio"
+                name="accountType"
+                value={option.value}
+                checked={accountType === option.value}
+                onChange={() => setAccountType(option.value)}
+                className="mt-1 accent-cyan-400"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-white">{option.label}</span>
+                <span className="block text-xs text-slate-300">{option.detail}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        {accountType === 'store_admin' && (
+          <label className="mt-4 block text-sm font-medium">
+            Nombre de tu tienda
+            <input
+              className="auth-input mt-1 w-full rounded-lg p-3"
+              value={storeName}
+              onChange={(event) => setStoreName(event.target.value)}
+              maxLength={120}
+              required
+            />
+          </label>
+        )}
         <label className="mt-6 block text-sm font-medium">
           Nombre
           <input

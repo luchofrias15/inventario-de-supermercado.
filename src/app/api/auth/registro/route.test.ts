@@ -19,10 +19,14 @@ function registroRequest(body: unknown) {
 }
 
 describe('registro endpoint', () => {
-  it('creates an account through Supabase and reports email confirmation when required', async () => {
+  it('accepts Supabase Auth REST user responses and reports email confirmation when required', async () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'test-api-key');
-    fetchMock.mockResolvedValueOnce(Response.json({ user: { id: 'user-id' } }));
+    fetchMock.mockResolvedValueOnce(Response.json({
+      id: 'user-id',
+      email: 'ana@example.com',
+      confirmation_sent_at: '2026-11-14T00:00:00Z',
+    }));
     vi.stubGlobal('fetch', fetchMock);
 
     const response = await POST(registroRequest({
@@ -38,8 +42,27 @@ describe('registro endpoint', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
       email: 'ana@example.com',
       password: 'secure-password',
-      data: { full_name: 'Ana Pérez' },
+      data: { full_name: 'Ana Pérez', account_type: 'customer' },
     });
+  });
+
+  it('accepts a user wrapped in a session response when email is auto-confirmed', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'test-api-key');
+    fetchMock.mockResolvedValueOnce(Response.json({
+      user: { id: 'user-id' },
+      session: { access_token: 'access-token', refresh_token: 'refresh-token' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await POST(registroRequest({
+      nombre: 'Ana Pérez',
+      email: 'ana@example.com',
+      password: 'secure-password',
+    }));
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual({ confirmationRequired: false });
   });
 
   it('rejects invalid registration data without contacting Supabase', async () => {
@@ -51,6 +74,66 @@ describe('registro endpoint', () => {
 
     expect(response.status).toBe(400);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('creates a store-admin signup with the store name in user metadata', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'test-api-key');
+    fetchMock.mockResolvedValueOnce(Response.json({ id: 'user-id' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await POST(registroRequest({
+      nombre: 'Luis',
+      email: 'luis@example.com',
+      password: 'secure-password',
+      accountType: 'store_admin',
+      storeName: 'Tienda Luis',
+    }));
+
+    expect(response.status).toBe(201);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+      data: {
+        full_name: 'Luis',
+        account_type: 'store_admin',
+        store_name: 'Tienda Luis',
+      },
+    });
+  });
+
+  it('does not contact Supabase when a store-admin signup omits the store name', async () => {
+    const response = await POST(registroRequest({
+      nombre: 'Luis',
+      email: 'luis@example.com',
+      password: 'secure-password',
+      accountType: 'store_admin',
+    }));
+
+    expect(response.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('marks a page-admin signup as pending without granting a role in the response', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'test-api-key');
+    fetchMock.mockResolvedValueOnce(Response.json({ id: 'user-id' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await POST(registroRequest({
+      nombre: 'Ana',
+      email: 'ana@example.com',
+      password: 'secure-password',
+      accountType: 'page_admin',
+    }));
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual({
+      confirmationRequired: true,
+      requestPending: true,
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).data).toEqual({
+      full_name: 'Ana',
+      account_type: 'page_admin',
+    });
   });
 
   it('rejects invalid JSON requests', async () => {

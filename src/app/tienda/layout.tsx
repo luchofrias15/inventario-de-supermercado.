@@ -9,7 +9,7 @@ export default async function LayoutTienda({ children }: { children: ReactNode }
 
   return (
     <div className="tienda-shell text-texto">
-      <NavegacionTienda email={sesion.email} />
+      <NavegacionTienda email={sesion.email} role={sesion.role} storeId={sesion.storeId} />
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
     </div>
   );

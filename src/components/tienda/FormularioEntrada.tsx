@@ -16,9 +16,10 @@ interface EntradaCreada {
 interface FormularioEntradaProps {
   productos: FilaInventario[];
   fechaHoy: string;
+  storeId: string;
 }
 
-export function FormularioEntrada({ productos, fechaHoy }: FormularioEntradaProps) {
+export function FormularioEntrada({ productos, fechaHoy, storeId }: FormularioEntradaProps) {
   const router = useRouter();
   const [codigo, setCodigo] = useState('');
   const [fechaEntrada, setFechaEntrada] = useState(fechaHoy);
@@ -47,11 +48,14 @@ export function FormularioEntrada({ productos, fechaHoy }: FormularioEntradaProp
     };
 
     try {
-      const respuesta = await fetch('/api/tienda/entradas', {
+      const respuesta = await fetch(
+        `/api/tienda/entradas?storeId=${encodeURIComponent(storeId)}`,
+        {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(datos),
-      });
+        },
+      );
       const entrada = await leerRespuestaApi<EntradaCreada>(respuesta);
       setMensaje(`Entrada registrada. Stock disponible: ${entrada.stock} unidades.`);
       router.refresh();

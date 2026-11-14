@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { categorySchema, productSchema } from '../../../../../data/_schema/inventory';
 import { create, getAll, getById, remove, update, JsonDBError } from '@/lib/json-db';
-import { exigirSesion } from '@/lib/auth/sesion';
+import { exigirAdminPagina, exigirSesion } from '@/lib/auth/sesion';
 import { ErrorDeNegocio } from '@/lib/reglas/errores';
 
 const schemas = { products: productSchema, categories: categorySchema } as const;
@@ -19,6 +19,12 @@ function errorResponse(error: unknown) {
       { status: 401, headers: { 'Cache-Control': 'no-store' } },
     );
   }
+  if (error instanceof ErrorDeNegocio && error.codigo === 'PERMISO_DENEGADO') {
+    return NextResponse.json(
+      { success: false, error: error.message, code: error.codigo, timestamp: new Date().toISOString() },
+      { status: 403, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
   const code = error instanceof JsonDBError ? error.code : 'IO_ERROR';
   const status = code === 'NOT_FOUND' ? 404 : code === 'READ_ONLY' ? 503 : 400;
   return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Error', code, timestamp: new Date().toISOString() }, { status });
@@ -32,7 +38,7 @@ async function collection(params: Promise<{ collection: string }>): Promise<Coll
 
 export async function GET(request: Request, { params }: { params: Promise<{ collection: string }> }) {
   try {
-    await exigirSesion();
+    exigirAdminPagina(await exigirSesion());
     const name = await collection(params);
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
@@ -48,7 +54,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ coll
 
 export async function POST(request: Request, { params }: { params: Promise<{ collection: string }> }) {
   try {
-    await exigirSesion();
+    exigirAdminPagina(await exigirSesion());
     const name = await collection(params);
     const body = await request.json();
     const parsed = inputSchema(name).omit({ id: true, createdAt: true, updatedAt: true }).safeParse(body);
@@ -59,7 +65,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ col
 
 export async function PUT(request: Request, { params }: { params: Promise<{ collection: string }> }) {
   try {
-    await exigirSesion();
+    exigirAdminPagina(await exigirSesion());
     const name = await collection(params);
     const body = await request.json() as { id?: string } & Record<string, unknown>;
     if (!body.id) return errorResponse(new Error('id es requerido'));
@@ -71,7 +77,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ coll
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ collection: string }> }) {
   try {
-    await exigirSesion();
+    exigirAdminPagina(await exigirSesion());
     const name = await collection(params);
     const id = new URL(request.url).searchParams.get('id');
     if (!id) return errorResponse(new Error('id es requerido'));

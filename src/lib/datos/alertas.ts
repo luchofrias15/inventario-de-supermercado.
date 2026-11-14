@@ -13,8 +13,9 @@ interface LoteAlertaDb {
   nombre: string;
 }
 
-export async function lotesPorVencer(): Promise<FilaLoteVencimiento[]> {
+export async function lotesPorVencer(storeId?: string): Promise<FilaLoteVencimiento[]> {
   const hoy = hoyBogota();
+  const storeCondition = storeId ? 'AND p.store_id = $3' : '';
   const lotes = await consultar<LoteAlertaDb>(
     `SELECT l.id, l.cantidad, l.fecha_entrada, l.fecha_vencimiento,
             p.codigo, p.nombre
@@ -23,9 +24,10 @@ export async function lotesPorVencer(): Promise<FilaLoteVencimiento[]> {
      WHERE l.cantidad > 0
        AND l.fecha_vencimiento IS NOT NULL
        AND l.fecha_vencimiento <= $1::date + $2::integer
+       ${storeCondition}
      ORDER BY l.fecha_vencimiento ASC, p.nombre ASC, l.id ASC
      LIMIT ${LIMITE_LISTADO}`,
-    [hoy, DIAS_AVISO_VENCIMIENTO],
+    storeId ? [hoy, DIAS_AVISO_VENCIMIENTO, storeId] : [hoy, DIAS_AVISO_VENCIMIENTO],
   );
 
   return lotes.flatMap((lote): FilaLoteVencimiento[] => {

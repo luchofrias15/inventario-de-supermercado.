@@ -1,16 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { desactivarProducto, obtenerProducto } from '@/lib/dataService';
+import { desactivarProducto, exigirTiendaOperativa, obtenerProducto } from '@/lib/dataService';
 import { exigirSesion } from '@/lib/auth/sesion';
 import { ErrorDeNegocio } from '@/lib/reglas/errores';
 import { DELETE, GET } from './route';
 
 vi.mock('@/lib/dataService', () => ({
   desactivarProducto: vi.fn(),
+  exigirTiendaOperativa: vi.fn(),
   obtenerProducto: vi.fn(),
 }));
-vi.mock('@/lib/auth/sesion', () => ({ exigirSesion: vi.fn() }));
+vi.mock('@/lib/auth/sesion', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/auth/sesion')>();
+  return { ...actual, exigirSesion: vi.fn() };
+});
 
 const desactivarMock = vi.mocked(desactivarProducto);
+const tiendaOperativaMock = vi.mocked(exigirTiendaOperativa);
 const obtenerMock = vi.mocked(obtenerProducto);
 const exigirSesionMock = vi.mocked(exigirSesion);
 
@@ -31,7 +36,13 @@ describe('/api/tienda/productos/[codigo]', () => {
   });
 
   it('desactiva el producto y confirma que se ocultará de la lista activa', async () => {
-    exigirSesionMock.mockResolvedValueOnce({ email: 'tienda@example.com' });
+    exigirSesionMock.mockResolvedValueOnce({
+      id: 'user-id',
+      email: 'tienda@example.com',
+      role: 'store_admin',
+      storeId: 'store-id',
+    });
+    tiendaOperativaMock.mockResolvedValueOnce('store-id');
     desactivarMock.mockResolvedValueOnce();
 
     const response = await DELETE(new Request('http://localhost/api/tienda/productos/LECHE', {
@@ -43,16 +54,23 @@ describe('/api/tienda/productos/[codigo]', () => {
       ok: true,
       datos: { codigo: 'LECHE', activo: false },
     });
-    expect(desactivarMock).toHaveBeenCalledWith('LECHE');
+    expect(desactivarMock).toHaveBeenCalledWith('LECHE', 'store-id');
   });
 
   it('mantiene GET protegido y devuelve el detalle del producto', async () => {
-    exigirSesionMock.mockResolvedValueOnce({ email: 'tienda@example.com' });
+    exigirSesionMock.mockResolvedValueOnce({
+      id: 'user-id',
+      email: 'tienda@example.com',
+      role: 'store_admin',
+      storeId: 'store-id',
+    });
+    tiendaOperativaMock.mockResolvedValueOnce('store-id');
     obtenerMock.mockResolvedValueOnce({
       id: 'producto-id',
       codigo: 'LECHE',
       nombre: 'Leche',
       categoria: 'perecedero',
+      precioUnitario: 2800,
       proveedor: null,
       puntoReorden: 10,
       stockDisponible: 0,
@@ -67,6 +85,23 @@ describe('/api/tienda/productos/[codigo]', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(obtenerMock).toHaveBeenCalledWith('LECHE');
+    expect(obtenerMock).toHaveBeenCalledWith('LECHE', 'store-id');
+  });
+
+  it('denies customers from deactivating products', async () => {
+    exigirSesionMock.mockResolvedValueOnce({
+      id: 'user-id',
+      email: 'cliente@example.com',
+      role: 'user',
+      storeId: null,
+    });
+    tiendaOperativaMock.mockRejectedValueOnce(new ErrorDeNegocio('PERMISO_DENEGADO'));
+
+    const response = await DELETE(new Request('http://localhost/api/tienda/productos/LECHE', {
+      method: 'DELETE',
+    }), { params: Promise.resolve({ codigo: 'LECHE' }) });
+
+    expect(response.status).toBe(403);
+    expect(desactivarMock).not.toHaveBeenCalled();
   });
 });

@@ -8,7 +8,12 @@ interface FilaRotacionDb {
   unidades_vendidas: number;
 }
 
-export async function reporteRotacion(desde: string, hasta: string): Promise<FilaRotacion[]> {
+export async function reporteRotacion(
+  desde: string,
+  hasta: string,
+  storeId?: string,
+): Promise<FilaRotacion[]> {
+  const storeCondition = storeId ? 'WHERE p.store_id = $3' : '';
   const filas = await consultar<FilaRotacionDb>(
     `SELECT p.codigo, p.nombre,
             COALESCE(SUM(m.cantidad), 0)::integer AS unidades_vendidas
@@ -18,10 +23,11 @@ export async function reporteRotacion(desde: string, hasta: string): Promise<Fil
       AND m.tipo = 'salida'
       AND m.fecha >= $1::date
       AND m.fecha <= $2::date
+     ${storeCondition}
      GROUP BY p.id, p.codigo, p.nombre
      ORDER BY unidades_vendidas DESC, p.nombre ASC
      LIMIT ${LIMITE_LISTADO}`,
-    [desde, hasta],
+    storeId ? [desde, hasta, storeId] : [desde, hasta],
   );
 
   return filas.map((fila) => ({

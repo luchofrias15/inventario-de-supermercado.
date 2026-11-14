@@ -1,13 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ErrorDeNegocio } from '@/lib/reglas/errores';
-import { reporteRotacion } from '@/lib/dataService';
+import { exigirTiendaOperativa, reporteRotacion } from '@/lib/dataService';
 import { exigirSesion } from '@/lib/auth/sesion';
 import { GET } from './route';
 
-vi.mock('@/lib/dataService', () => ({ reporteRotacion: vi.fn() }));
-vi.mock('@/lib/auth/sesion', () => ({ exigirSesion: vi.fn() }));
+vi.mock('@/lib/dataService', () => ({
+  exigirTiendaOperativa: vi.fn(),
+  reporteRotacion: vi.fn(),
+}));
+vi.mock('@/lib/auth/sesion', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/auth/sesion')>();
+  return { ...actual, exigirSesion: vi.fn() };
+});
 
 const reporteMock = vi.mocked(reporteRotacion);
+const tiendaOperativaMock = vi.mocked(exigirTiendaOperativa);
 const exigirSesionMock = vi.mocked(exigirSesion);
 
 afterEach(() => {
@@ -25,7 +32,13 @@ describe('GET /api/tienda/rotacion', () => {
   });
 
   it('valida el rango antes de consultar la rotación', async () => {
-    exigirSesionMock.mockResolvedValueOnce({ email: 'tienda@example.com' });
+    exigirSesionMock.mockResolvedValueOnce({
+      id: 'user-id',
+      email: 'tienda@example.com',
+      role: 'store_admin',
+      storeId: 'store-id',
+    });
+    tiendaOperativaMock.mockResolvedValueOnce('store-id');
 
     const response = await GET(new Request('http://localhost/api/tienda/rotacion?desde=2026-11-15&hasta=2026-11-14'));
 
@@ -34,7 +47,13 @@ describe('GET /api/tienda/rotacion', () => {
   });
 
   it('devuelve productos para un rango válido', async () => {
-    exigirSesionMock.mockResolvedValueOnce({ email: 'tienda@example.com' });
+    exigirSesionMock.mockResolvedValueOnce({
+      id: 'user-id',
+      email: 'tienda@example.com',
+      role: 'store_admin',
+      storeId: 'store-id',
+    });
+    tiendaOperativaMock.mockResolvedValueOnce('store-id');
     reporteMock.mockResolvedValueOnce([
       { codigo: 'ARROZ', nombre: 'Arroz', unidadesVendidas: 12 },
     ]);
@@ -46,6 +65,6 @@ describe('GET /api/tienda/rotacion', () => {
       ok: true,
       datos: [{ codigo: 'ARROZ', nombre: 'Arroz', unidadesVendidas: 12 }],
     });
-    expect(reporteMock).toHaveBeenCalledWith('2026-11-01', '2026-11-14');
+    expect(reporteMock).toHaveBeenCalledWith('2026-11-01', '2026-11-14', 'store-id');
   });
 });

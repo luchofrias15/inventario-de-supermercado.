@@ -22,7 +22,7 @@ interface SupabaseTokenResponse {
 
 interface SupabaseProfile {
   full_name: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'store_admin' | 'user';
 }
 
 export async function POST(request: Request) {

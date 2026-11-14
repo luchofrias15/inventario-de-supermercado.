@@ -8,12 +8,31 @@ const registroSchema = z.object({
   nombre: z.string().trim().min(1).max(120),
   email: z.string().trim().toLowerCase().email().max(254),
   password: z.string().min(8).max(1024),
+  accountType: z.enum(['customer', 'store_admin', 'page_admin']).default('customer'),
+  storeName: z.string().trim().max(120).optional(),
+}).superRefine((data, context) => {
+  if (data.accountType === 'store_admin' && !data.storeName) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['storeName'],
+      message: 'Ingresa el nombre de tu tienda.',
+    });
+  }
 });
 
 interface SupabaseSignupResponse {
+  id?: string;
   user?: { id?: string };
   access_token?: string;
   refresh_token?: string;
+  session?: {
+    access_token?: string;
+    refresh_token?: string;
+  } | null;
+}
+
+function esObjeto(valor: unknown): valor is Record<string, unknown> {
+  return typeof valor === 'object' && valor !== null;
 }
 
 export async function POST(request: Request) {
@@ -56,7 +75,11 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         email: input.data.email,
         password: input.data.password,
-        data: { full_name: input.data.nombre },
+        data: {
+          full_name: input.data.nombre,
+          account_type: input.data.accountType,
+          ...(input.data.storeName ? { store_name: input.data.storeName } : {}),
+        },
       }),
       cache: 'no-store',
     });
@@ -86,15 +109,43 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = (await signupResponse.json()) as SupabaseSignupResponse;
-  if (!result.user?.id) {
+  let result: unknown;
+  try {
+    result = await signupResponse.json();
+  } catch {
     return NextResponse.json(
-      { error: 'Supabase no confirmó la creación de la cuenta.' },
+      { error: 'Supabase respondió con un formato inválido al crear la cuenta.' },
       { status: 502 },
     );
   }
 
+  if (!esObjeto(result)) {
+    return NextResponse.json(
+      { error: 'Supabase respondió con un formato inválido al crear la cuenta.' },
+      { status: 502 },
+    );
+  }
+
+  const signup = result as SupabaseSignupResponse;
+  const userId =
+    (esObjeto(signup.user) && typeof signup.user.id === 'string' ? signup.user.id : undefined) ??
+    (typeof signup.id === 'string' ? signup.id : undefined);
+  if (!userId) {
+    return NextResponse.json(
+      { error: 'Supabase no devolvió el usuario creado. Verifica si el correo ya está registrado.' },
+      { status: 502 },
+    );
+  }
+
+  const session = esObjeto(signup.session) ? signup.session : undefined;
+  const accessToken =
+    (typeof signup.access_token === 'string' ? signup.access_token : undefined) ??
+    (typeof session?.access_token === 'string' ? session.access_token : undefined);
+  const refreshToken =
+    (typeof signup.refresh_token === 'string' ? signup.refresh_token : undefined) ??
+    (typeof session?.refresh_token === 'string' ? session.refresh_token : undefined);
   return NextResponse.json({
-    confirmationRequired: !result.access_token || !result.refresh_token,
+    confirmationRequired: !accessToken || !refreshToken,
+    ...(input.data.accountType === 'page_admin' ? { requestPending: true } : {}),
   }, { status: 201 });
 }

@@ -23,9 +23,12 @@ async function exists(name, kind) {
 async function checkSchema() {
   console.log('1. Tablas y vista');
   const objects = [
+    ['stores', 'r'],
     ['productos', 'r'],
     ['lotes', 'r'],
     ['movimientos', 'r'],
+    ['store_orders', 'r'],
+    ['store_order_items', 'r'],
     ['v_productos', 'v'],
   ];
   let allPresent = true;
@@ -38,15 +41,27 @@ async function checkSchema() {
   if (!allPresent) return false;
 
   console.log('\n2. Filas');
-  for (const table of ['productos', 'lotes', 'movimientos', 'v_productos']) {
+  for (const table of [
+    'stores',
+    'productos',
+    'lotes',
+    'movimientos',
+    'store_orders',
+    'store_order_items',
+    'v_productos',
+  ]) {
     const result = await pool.query(`SELECT COUNT(*)::bigint AS total FROM public.${table}`);
     console.log(`   ${table}: ${result.rows[0].total}`);
   }
 
   console.log('\n3. Restricciones');
   const constraints = [
-    ['productos', 'productos_codigo_unico', 'u'],
+    ['productos', 'productos_store_codigo_unico', 'i'],
     ['productos', 'productos_categoria_valida', 'c'],
+    ['productos', 'productos_precio_unitario_positivo', 'c'],
+    ['store_orders', 'store_orders_payment_method_check', 'c'],
+    ['store_orders', 'store_orders_status_check', 'c'],
+    ['store_order_items', 'store_order_items_quantity_check', 'c'],
     ['lotes', 'lotes_cantidad_no_neg', 'c'],
     ['lotes', 'lotes_fechas_coherentes', 'c'],
     ['movimientos', 'mov_cantidad_positiva', 'c'],
@@ -54,10 +69,17 @@ async function checkSchema() {
   for (const [table, name, type] of constraints) {
     const result = await pool.query(
       `SELECT EXISTS (
-         SELECT 1 FROM pg_constraint c
-         JOIN pg_class t ON t.oid = c.conrelid
-         JOIN pg_namespace n ON n.oid = t.relnamespace
-         WHERE n.nspname = 'public' AND t.relname = $1
+         SELECT 1
+         FROM pg_class idx
+         JOIN pg_namespace n ON n.oid = idx.relnamespace
+         WHERE n.nspname = 'public' AND idx.relname = $2
+           AND idx.relkind = 'i' AND $3 = 'i'
+         UNION ALL
+         SELECT 1
+         FROM pg_constraint c
+         JOIN pg_class tbl ON tbl.oid = c.conrelid
+         JOIN pg_namespace n ON n.oid = tbl.relnamespace
+         WHERE n.nspname = 'public' AND tbl.relname = $1
            AND c.conname = $2 AND c.contype = $3
        ) AS present`,
       [table, name, type],
@@ -71,9 +93,16 @@ async function checkSchema() {
      FROM pg_class c
      JOIN pg_namespace n ON n.oid = c.relnamespace
      WHERE n.nspname = 'public' AND c.relname = ANY($1::text[])`,
-    [['productos', 'lotes', 'movimientos']],
+    [['stores', 'productos', 'lotes', 'movimientos', 'store_orders', 'store_order_items']],
   );
-  for (const table of ['productos', 'lotes', 'movimientos']) {
+  for (const table of [
+    'stores',
+    'productos',
+    'lotes',
+    'movimientos',
+    'store_orders',
+    'store_order_items',
+  ]) {
     const row = rls.rows.find((item) => item.relname === table);
     report(`${table} RLS activo`, row?.relrowsecurity === true);
   }
@@ -108,29 +137,36 @@ async function checkIntegrity() {
     await client.query('BEGIN');
     transactionStarted = true;
 
+    const defaultStore = await client.query(
+      'SELECT id FROM public.stores WHERE is_default = true',
+    );
+    const storeId = defaultStore.rows[0]?.id;
+    if (!storeId) throw new Error('No existe una tienda predeterminada.');
+
     const created = await client.query(
-      `INSERT INTO productos (codigo, nombre, categoria)
-       VALUES ('TD-A', 'Producto prueba P01', 'perecedero')
+      `INSERT INTO productos (codigo, nombre, categoria, store_id)
+       VALUES ('TD-A', 'Producto prueba P01', 'perecedero', $1)
        RETURNING id`,
+      [storeId],
     );
     report('a) crear TD-A', true);
     const productId = created.rows[0].id;
 
     await expectConstraint(
       client,
-      'a) código duplicado devuelve 23505 productos_codigo_unico',
-      `INSERT INTO productos (codigo, nombre, categoria)
-       VALUES ('TD-A', 'Duplicado prueba P01', 'perecedero')`,
-      [],
+      'a) código duplicado devuelve 23505 productos_store_codigo_unico',
+      `INSERT INTO productos (codigo, nombre, categoria, store_id)
+       VALUES ('TD-A', 'Duplicado prueba P01', 'perecedero', $1)`,
+      [storeId],
       '23505',
-      'productos_codigo_unico',
+      'productos_store_codigo_unico',
     );
     await expectConstraint(
       client,
       'b) categoría inválida devuelve 23514 productos_categoria_valida',
-      `INSERT INTO productos (codigo, nombre, categoria)
-       VALUES ('TD-B', 'Categoría inválida P01', 'otra')`,
-      [],
+      `INSERT INTO productos (codigo, nombre, categoria, store_id)
+       VALUES ('TD-B', 'Categoría inválida P01', 'otra', $1)`,
+      [storeId],
       '23514',
       'productos_categoria_valida',
     );

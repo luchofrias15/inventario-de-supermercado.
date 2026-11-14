@@ -14,7 +14,15 @@ function EstadoProducto({ producto }: { producto: FilaInventario }) {
   return <InsigniaEstado estado={producto.paraReordenar ? 'para_reordenar' : 'normal'} />;
 }
 
-export function TablaInventario({ productos }: { productos: FilaInventario[] }) {
+export function TablaInventario({
+  productos,
+  puedeAdministrar = true,
+  storeId,
+}: {
+  productos: FilaInventario[];
+  puedeAdministrar?: boolean;
+  storeId: string;
+}) {
   const router = useRouter();
   const [busqueda, setBusqueda] = useState('');
   const [soloReorden, setSoloReorden] = useState(false);
@@ -31,7 +39,7 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
     setError('');
     try {
       const respuesta = await fetch(
-        `/api/tienda/productos/${encodeURIComponent(producto.codigo)}`,
+        `/api/tienda/productos/${encodeURIComponent(producto.codigo)}?storeId=${encodeURIComponent(storeId)}`,
         { method: 'DELETE' },
       );
       await leerRespuestaApi<{ codigo: string; activo: boolean }>(respuesta);
@@ -57,15 +65,17 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
     return (
       <EstadoVacio
         titulo="Tu inventario está vacío"
-        descripcion="Crea el primer producto y registra su entrada para empezar."
-        accion={
+        descripcion={puedeAdministrar
+          ? 'Crea el primer producto y registra su entrada para empezar.'
+          : 'No hay productos disponibles para consultar.'}
+        accion={puedeAdministrar ? (
           <Link
-            href="/tienda/productos/nuevo"
+            href={`/tienda/productos/nuevo?storeId=${encodeURIComponent(storeId)}`}
             className="inline-flex min-h-10 items-center rounded-lg bg-primario px-4 py-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primario"
           >
             Nuevo producto
           </Link>
-        }
+        ) : undefined}
       />
     );
   }
@@ -105,6 +115,7 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
               <th scope="col" className="px-4 py-3">Código</th>
               <th scope="col" className="px-4 py-3">Producto</th>
               <th scope="col" className="px-4 py-3">Categoría</th>
+              <th scope="col" className="px-4 py-3 text-right">Precio unidad (COP)</th>
               <th scope="col" className="px-4 py-3 text-right">Stock disponible</th>
               <th scope="col" className="px-4 py-3">Estado</th>
               <th scope="col" className="px-4 py-3 text-right">
@@ -118,16 +129,20 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
                 <td className="px-4 py-3 font-mono text-xs">{producto.codigo}</td>
                 <td className="px-4 py-3 font-medium">
                   <Link
-                    href={`/tienda/productos/${encodeURIComponent(producto.codigo)}`}
+                    href={`/tienda/productos/${encodeURIComponent(producto.codigo)}?storeId=${encodeURIComponent(storeId)}`}
                     className="text-primario underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-primario"
                   >
                     {producto.nombre}
                   </Link>
                 </td>
                 <td className="px-4 py-3">{producto.categoria === 'perecedero' ? 'Perecedero' : 'No perecedero'}</td>
+                <td className="px-4 py-3 text-right font-mono tabular-nums">
+                  {producto.precioUnitario === null ? '—' : producto.precioUnitario.toLocaleString('es-CO')}
+                </td>
                 <td className="px-4 py-3 text-right font-mono tabular-nums">{producto.stockDisponible}</td>
                 <td className="px-4 py-3"><EstadoProducto producto={producto} /></td>
                 <td className="px-4 py-3 text-right">
+                  {puedeAdministrar && (
                   <button
                     type="button"
                     aria-label={`Ocultar ${producto.nombre} del inventario`}
@@ -144,6 +159,7 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
                       </svg>
                     )}
                   </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -157,7 +173,7 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
             <div className="flex items-start justify-between gap-3">
               <div>
                 <Link
-                  href={`/tienda/productos/${encodeURIComponent(producto.codigo)}`}
+                  href={`/tienda/productos/${encodeURIComponent(producto.codigo)}?storeId=${encodeURIComponent(storeId)}`}
                   className="font-semibold text-primario underline-offset-2 hover:underline"
                 >
                   {producto.nombre}
@@ -166,6 +182,7 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
               </div>
               <div className="flex items-center gap-2">
                 <EstadoProducto producto={producto} />
+                {puedeAdministrar && (
                 <button
                   type="button"
                   aria-label={`Ocultar ${producto.nombre} del inventario`}
@@ -182,12 +199,21 @@ export function TablaInventario({ productos }: { productos: FilaInventario[] }) 
                     </svg>
                   )}
                 </button>
+                )}
               </div>
             </div>
             <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div>
                 <dt className="text-texto-suave">Categoría</dt>
                 <dd className="mt-1">{producto.categoria === 'perecedero' ? 'Perecedero' : 'No perecedero'}</dd>
+              </div>
+              <div>
+                <dt className="text-texto-suave">Precio por unidad</dt>
+                <dd className="mt-1 font-mono font-semibold tabular-nums">
+                  {producto.precioUnitario === null
+                    ? 'No registrado'
+                    : `$ ${producto.precioUnitario.toLocaleString('es-CO')} COP`}
+                </dd>
               </div>
               <div>
                 <dt className="text-texto-suave">Stock disponible</dt>

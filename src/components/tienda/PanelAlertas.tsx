@@ -2,7 +2,13 @@ import Link from 'next/link';
 import { Aviso } from '@/components/ui/Aviso';
 import type { FilaInventario } from '@/lib/datos/tipos';
 
-export function PanelAlertas({ productos }: { productos: FilaInventario[] }) {
+export function PanelAlertas({
+  productos,
+  storeId,
+}: {
+  productos: FilaInventario[];
+  storeId: string;
+}) {
   if (productos.length === 0) return null;
 
   return (
@@ -16,7 +22,7 @@ export function PanelAlertas({ productos }: { productos: FilaInventario[] }) {
         {productos.map((producto) => (
           <li key={producto.id}>
             <Link
-              href={`/tienda/productos/${encodeURIComponent(producto.codigo)}`}
+              href={`/tienda/productos/${encodeURIComponent(producto.codigo)}?storeId=${encodeURIComponent(storeId)}`}
               className="font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-primario"
             >
               {producto.nombre}: quedan {producto.stockDisponible} unidades (punto de reorden: 10).

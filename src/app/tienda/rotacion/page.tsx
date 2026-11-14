@@ -3,15 +3,18 @@ import { Aviso } from '@/components/ui/Aviso';
 import { Campo } from '@/components/ui/Campo';
 import { Tarjeta } from '@/components/ui/Tarjeta';
 import { TablaRotacion } from '@/components/tienda/TablaRotacion';
-import { reporteRotacion } from '@/lib/dataService';
+import { exigirTiendaOperativa, obtenerTienda, reporteRotacion } from '@/lib/dataService';
 import { hoyBogota } from '@/lib/reglas/fechas';
 import { esquemaRango } from '@/lib/validacion/esquemas';
+import { redirect } from 'next/navigation';
+import { exigirSesion } from '@/lib/auth/sesion';
 
 export const dynamic = 'force-dynamic';
 
 type ParametrosBusqueda = {
   desde?: string | string[];
   hasta?: string | string[];
+  storeId?: string | string[];
 };
 
 function valorUnico(valor: string | string[] | undefined): string | undefined {
@@ -23,7 +26,12 @@ export default async function RotacionPage({
 }: {
   searchParams: Promise<ParametrosBusqueda>;
 }) {
+  const sesion = await exigirSesion();
+  if (sesion.role === 'user') redirect('/tienda');
   const parametros = await searchParams;
+  const requestedStoreId = valorUnico(parametros.storeId);
+  const storeId = await exigirTiendaOperativa(sesion, requestedStoreId);
+  const tienda = await obtenerTienda(storeId);
   const hoy = hoyBogota();
   const rangoInicial = { desde: `${hoy.slice(0, 7)}-01`, hasta: hoy };
   const parametrosAusentes = parametros.desde === undefined && parametros.hasta === undefined;
@@ -35,7 +43,7 @@ export default async function RotacionPage({
       };
   const validacion = esquemaRango.safeParse(candidato);
   const filas = validacion.success
-    ? await reporteRotacion(validacion.data.desde, validacion.data.hasta)
+    ? await reporteRotacion(validacion.data.desde, validacion.data.hasta, storeId)
     : null;
   const rangoFormulario = validacion.success
     ? validacion.data
@@ -47,8 +55,8 @@ export default async function RotacionPage({
   return (
     <>
       <div>
-        <Link href="/tienda" className="text-sm font-medium text-primario hover:underline">
-          Volver al inventario
+        <Link href={`/tienda?storeId=${encodeURIComponent(storeId)}`} className="text-sm font-medium text-primario hover:underline">
+          Volver a {tienda?.nombre}
         </Link>
         <h1 className="mt-3 text-3xl font-bold tracking-tight">Reporte de rotación</h1>
         <p className="mt-2 text-texto-suave">
@@ -57,20 +65,23 @@ export default async function RotacionPage({
       </div>
       <Tarjeta>
         <form action="/tienda/rotacion" method="get" className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <input type="hidden" name="storeId" value={storeId} />
           <Campo
+            key={`desde-${rangoFormulario.desde}`}
             id="rotacion-desde"
             name="desde"
             etiqueta="Desde"
             type="date"
-            value={rangoFormulario.desde}
+            defaultValue={rangoFormulario.desde ?? ''}
             required
           />
           <Campo
+            key={`hasta-${rangoFormulario.hasta}`}
             id="rotacion-hasta"
             name="hasta"
             etiqueta="Hasta"
             type="date"
-            value={rangoFormulario.hasta}
+            defaultValue={rangoFormulario.hasta ?? ''}
             required
           />
           <button

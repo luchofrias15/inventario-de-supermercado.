@@ -6,6 +6,7 @@ export interface FilaInventario {
   codigo: string;
   nombre: string;
   categoria: Categoria;
+  precioUnitario: number | null;
   proveedor: string | null;
   puntoReorden: number;
   stockDisponible: number;
@@ -37,6 +38,7 @@ export interface DatosProducto {
   codigo: string;
   nombre: string;
   categoria: Categoria;
+  precioUnitario: number;
   proveedor?: string;
 }
 
@@ -65,4 +67,34 @@ export interface FilaRotacion {
   codigo: string;
   nombre: string;
   unidadesVendidas: number;
+}
+
+export type MetodoPagoPedido = 'transferencia' | 'efectivo';
+export type EstadoPedido = 'pending' | 'accepted' | 'rejected' | 'cancelled';
+
+export interface ItemPedido {
+  productId: string;
+  codigo: string;
+  nombre: string;
+  precioUnitario: number;
+  cantidad: number;
+  total: number;
+}
+
+export interface Pedido {
+  id: string;
+  storeId: string;
+  tienda: string;
+  customerId: string;
+  correoCliente: string;
+  nombreCliente: string;
+  telefonoCliente: string;
+  direccion: string;
+  barrio: string;
+  instrucciones: string;
+  metodoPago: MetodoPagoPedido;
+  estado: EstadoPedido;
+  subtotal: number;
+  creadoEn: string;
+  items: ItemPedido[];
 }
